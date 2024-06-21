@@ -118,7 +118,7 @@ func (tm *TaskManager) AddJob(jr JobRunner) (func(), error) {
 
 func (tm *TaskManager) startTaskMgrInBg(gctx context.Context, gwg *sync.WaitGroup) {
 	allJobsCtx, cancelFn := context.WithCancel(gctx)
-	tm.cancelAll = cancelFn // used in StopAllJobs()
+	tm.cancelAll = cancelFn // used in StopManager()
 	gwg.Add(1)              // must add(1) before go func()
 	go func() {
 		defer func() {
@@ -157,7 +157,7 @@ func (tm *TaskManager) startJob(allJobsCtx context.Context, jd *jobDetail) {
 	}
 	select {
 	case jd.stopChan <- currentCancelFunc: // return the cancel func to user for user controlled stopTask()
-	default: // should not happeen. the channel has a buffer size of 1
+	default:
 		tm.lgr.Print(fmt.Sprintf("TaskManager startJob(%s) sending cancelFunc to job stop chan error\n", jd.jobName))
 	}
 	tm.lgr.Print("Info", fmt.Sprintf("TaskManager startJob(%s) started\n", jd.jobName))
@@ -223,7 +223,7 @@ func stopTimer(jobTimer *time.Timer) {
 	if jobTimer == nil {
 		return
 	}
-	if !jobTimer.Stop() { // http://russellluo.com/2018/09/the-correct-way-to-use-timer-in-golang.html
+	if !jobTimer.Stop() {
 		select {
 		case <-jobTimer.C: // try to drain the channel
 		default: // use default to avoid blocking in above case
@@ -254,7 +254,7 @@ func stopTicker(jobTicker *time.Ticker) {
 	}
 }
 
-func (tm *TaskManager) StopManager() {
 // stops the manager and all running jobs
+func (tm *TaskManager) StopManager() {
 	tm.cancelAll()
 }
